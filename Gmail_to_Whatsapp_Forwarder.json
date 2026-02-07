@@ -1,0 +1,132 @@
+{
+  "name": "Gmail to WhatsApp Forwarder",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": true,
+        "filters": {
+          "includeSpamTrash": false,
+          "readStatus": "unread"
+        },
+        "format": "simple"
+      },
+      "id": "aa7f4b6e-4d5c-4f1a-8b9d-1234567890ab",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [300, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "message_text",
+              "value": "=📧 *New Email*\n\n*From:* {{ $json.from }}\n*Subject:* {{ $json.subject }}\n*Date:* {{ $json.date }}\n\n*Preview:*\n{{ $json.snippet }}\n\n_Forwarded from Gmail_"
+            },
+            {
+              "name": "phone_number", 
+              "value": "={{ $vars.RECIPIENT_PHONE }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bb8f5c7f-5e6d-5f2b-9c0e-2345678901bc",
+      "name": "Format Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $vars.WHATSAPP_PHONE_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.phone_number }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.message_text }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "cc9f6d8g-6f7e-6f3c-0d1f-3456789012cd",
+      "name": "Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [740, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "removeLabelIds": ["UNREAD"]
+      },
+      "id": "dd0f7e9h-7g8f-7g4d-1e2g-4567890123de",
+      "name": "Mark as Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Message": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Mark as Read",
+            "type": "main", 
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2025-06-22T10:00:00.000Z",
+  "updatedAt": "2025-06-22T10:00:00.000Z",
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "versionId": "1"
+}
